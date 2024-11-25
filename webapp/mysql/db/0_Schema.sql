@@ -18,11 +18,14 @@ CREATE TABLE isuumo.estate
     door_width  INTEGER             NOT NULL,
     features    VARCHAR(64)         NOT NULL,
     popularity  INTEGER             NOT NULL,
-    nega_popularity  INTEGER AS (-popularity) NOT NULL
+    nega_popularity  INTEGER AS (-popularity) NOT NULL,
+    location   POINT AS (POINT(latitude, longitude)) STORED NOT NULL -- spatial index を貼るため
 );
 
 CREATE INDEX idx_rent_id ON isuumo.estate (rent, id);
 CREATE INDEX idx_nega_popularity_id ON isuumo.estate (nega_popularity ASC, id ASC);
+CREATE SPATIAL INDEX idx_spatial ON isuumo.estate (location);
+
 
 CREATE TABLE isuumo.chair
 (
