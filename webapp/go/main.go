@@ -663,30 +663,72 @@ func postEstate(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
-	for _, row := range records {
-		rm := RecordMapper{Record: row}
-		id := rm.NextInt()
-		name := rm.NextString()
-		description := rm.NextString()
-		thumbnail := rm.NextString()
-		address := rm.NextString()
-		latitude := rm.NextFloat()
-		longitude := rm.NextFloat()
-		rent := rm.NextInt()
-		doorHeight := rm.NextInt()
-		doorWidth := rm.NextInt()
-		features := rm.NextString()
-		popularity := rm.NextInt()
-		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
-		if err != nil {
-			c.Logger().Errorf("failed to insert estate: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-	}
+//	for _, row := range records {
+//		rm := RecordMapper{Record: row}
+//		id := rm.NextInt()
+//		name := rm.NextString()
+//		description := rm.NextString()
+//		thumbnail := rm.NextString()
+//		address := rm.NextString()
+//		latitude := rm.NextFloat()
+//		longitude := rm.NextFloat()
+//		rent := rm.NextInt()
+//		doorHeight := rm.NextInt()
+//		doorWidth := rm.NextInt()
+//		features := rm.NextString()
+//		popularity := rm.NextInt()
+//		if err := rm.Err(); err != nil {
+//			c.Logger().Errorf("failed to read record: %v", err)
+//			return c.NoContent(http.StatusBadRequest)
+//		}
+//		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+//		if err != nil {
+//			c.Logger().Errorf("failed to insert estate: %v", err)
+//			return c.NoContent(http.StatusInternalServerError)
+//		}
+//	}
+
+        values := []string{}
+        params := []interface{}{}
+        
+        for _, row := range records {
+            rm := RecordMapper{Record: row}
+            id := rm.NextInt()
+            name := rm.NextString()
+            description := rm.NextString()
+            thumbnail := rm.NextString()
+            address := rm.NextString()
+            latitude := rm.NextFloat()
+            longitude := rm.NextFloat()
+            rent := rm.NextInt()
+            doorHeight := rm.NextInt()
+            doorWidth := rm.NextInt()
+            features := rm.NextString()
+            popularity := rm.NextInt()
+            if err := rm.Err(); err != nil {
+                c.Logger().Errorf("failed to read record: %v", err)
+                return c.NoContent(http.StatusBadRequest)
+            }
+            // SQLのVALUES句を構築
+            values = append(values, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            params = append(params, id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+        }
+        
+        if len(values) == 0 {
+            return c.NoContent(http.StatusBadRequest) // データがない場合は処理を中止
+        }
+        
+        // BULK INSERT用のSQLを構築
+        query := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES " + strings.Join(values, ", ")
+        
+        _, err = tx.Exec(query, params...)
+        if err != nil {
+            c.Logger().Errorf("failed to bulk insert estate: %v", err)
+            return c.NoContent(http.StatusInternalServerError)
+        }
+
+
+
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
